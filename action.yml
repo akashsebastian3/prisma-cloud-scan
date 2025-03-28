@@ -6,7 +6,7 @@ branding:
 inputs:
   custom_labels:
     description: Comma-separated custom labels for twistcli
-    required: false
+    required: true
   pcc_console_url:
     description: URL of your Prisma Cloud Compute Console
     required: true
