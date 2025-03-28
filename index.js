@@ -249,6 +249,7 @@ async function scan() {
 
   const resultsFile = core.getInput('results_file');
   const sarifFile = core.getInput('sarif_file');
+  const customLabels = core.getInput('custom_labels');
 
   try {
     let token;
@@ -294,6 +295,9 @@ async function scan() {
     }
     if (TRUE_VALUES.includes(containerized)) {
       twistcliCmd = twistcliCmd.concat(['--containerized']);
+    }
+    if (customLabels) {
+      twistcliCmd = twistcliCmd.concat([`--custom-labels "${customLabels}"`]);
     }
     twistcliCmd = twistcliCmd.concat([imageName]);
 

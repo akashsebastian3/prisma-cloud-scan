@@ -4,6 +4,9 @@ branding:
   color: orange
   icon: search
 inputs:
+  custom_labels:
+    description: Comma-separated custom labels for twistcli
+    required: false
   pcc_console_url:
     description: URL of your Prisma Cloud Compute Console
     required: true
