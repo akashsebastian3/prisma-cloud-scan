@@ -10,14 +10,10 @@ function toSentenceCase(string) {
   return string[0].toUpperCase() + string.slice(1).toLowerCase();
 }
 
-// https://github.com/nodejs/node/issues/18288#issuecomment-475864601
-// Necessary for Console URLs that already have a path (all SaaS Consoles)
 function joinUrlPath(...parts) {
-  // Filter handles cases where Console URL pathname is '/' in order to avoid '//api/v1/etc/' (double slash)
   return '/' + parts.filter(part => part !== '/').map(part => part.replace(/(^\/|\/$)/g, '')).join('/');
 }
 
-// Wrapper around 'authenticate' Console API endpoint
 async function authenticate(url, user, pass) {
   let parsedUrl;
   try {
@@ -48,7 +44,6 @@ async function authenticate(url, user, pass) {
   }
 }
 
-// Wrapper around 'version' Console API endpoint
 async function getVersion(url, token) {
   let parsedUrl;
   try {
@@ -75,8 +70,6 @@ async function getVersion(url, token) {
   }
 }
 
-// GitHub Action-specific wrapper around 'util/twistcli' Console API endpoint
-// Saves twistcli using GitHub Action's tool-cache library
 async function getTwistcli(version, url, authToken) {
   let parsedUrl;
   try {
@@ -98,7 +91,6 @@ async function getTwistcli(version, url, authToken) {
 }
 
 function formatSarifToolDriverRules(results) {
-  // Only 1 image can be scanned at a time
   const result = results[0];
   const vulnerabilities = result.vulnerabilities;
   const compliances = result.compliances;
@@ -148,15 +140,7 @@ function formatSarifToolDriverRules(results) {
   return [...vulns, ...comps];
 }
 
-/**
- * convert prima severity to github severity
- * @param {string} severity
- * @throws {Error} unknown severity
- * @returns string
- */
 function convertPrismaSeverity(severity) {
-  // prisma: critical, high, medium, low
-  // gh: error, warning, note, none
   switch (severity) {
     case "critical":
       return "error";
@@ -172,7 +156,6 @@ function convertPrismaSeverity(severity) {
 }
 
 function formatSarifResults(results) {
-  // Only 1 image can be scanned at a time
   const result = results[0];
   const imageName = result.name;
   let findings = [];
@@ -249,65 +232,38 @@ async function scan() {
 
   const resultsFile = core.getInput('results_file');
   const sarifFile = core.getInput('sarif_file');
-  const customLabels = core.getInput('custom_labels');
 
   try {
-    let token;
-    try {
-      token = await authenticate(consoleUrl, username, password, httpProxy);
-    } catch (err) {
-      core.setFailed(`Failed authenticating: ${err.message}`);
-      process.exit(1);
-    }
-
-    let twistcliVersion;
-    try {
-      twistcliVersion = await getVersion(consoleUrl, token, httpProxy);
-    } catch (err) {
-      core.setFailed(`Failed getting version: ${err.message}`);
-      process.exit(1);
-    }
+    const token = await authenticate(consoleUrl, username, password, httpProxy);
+    let twistcliVersion = await getVersion(consoleUrl, token, httpProxy);
     twistcliVersion = twistcliVersion.replace(/"/g, '');
 
     await getTwistcli(twistcliVersion, consoleUrl, token);
-    let twistcliCmd = ['twistcli'];
-    if (httpProxy) {
-      twistcliCmd = twistcliCmd.concat([`--http-proxy ${httpProxy}`]);
-    }
-    twistcliCmd = twistcliCmd.concat([
-      'images', 'scan',
-      `--address ${consoleUrl}`,
-      `--user ${username}`, `--password ${password}`,
-      `--output-file ${resultsFile}`,
-      '--details',' --custom-labels traceable',
-    ]);
 
-    twistcliCmd.push('--custom-label', 'harness');
+    let twistcliCmd = [
+      'twistcli', 'images', 'scan',
+      '--address', consoleUrl,
+      '--user', username,
+      '--password', password,
+      '--output-file', resultsFile,
+      '--details',
+      '--custom-label', 'traceable'
+    ];
+
+    if (dockerAddress) twistcliCmd.push('--docker-address', dockerAddress);
+    if (dockerTlsCaCert) twistcliCmd.push('--docker-tlscacert', dockerTlsCaCert);
+    if (dockerTlsCert) twistcliCmd.push('--docker-tlscert', dockerTlsCert);
+    if (dockerTlsKey) twistcliCmd.push('--docker-tlskey', dockerTlsKey);
+    if (TRUE_VALUES.includes(containerized)) twistcliCmd.push('--containerized');
+
+    twistcliCmd.push(imageName);
 
     console.log('twistcli command:', twistcliCmd.join(' '));
-    if (dockerAddress) {
-      twistcliCmd = twistcliCmd.concat([`--docker-address ${dockerAddress}`]);
-    }
-    if (dockerTlsCaCert) {
-      twistcliCmd = twistcliCmd.concat([`--docker-tlscacert ${dockerTlsCaCert}`]);
-    }
-    if (dockerTlsCert) {
-      twistcliCmd = twistcliCmd.concat([`--docker-tlscert ${dockerTlsCert}`]);
-    }
-    if (dockerTlsKey) {
-      twistcliCmd = twistcliCmd.concat([`--docker-tlskey ${dockerTlsKey}`]);
-    }
-    if (TRUE_VALUES.includes(containerized)) {
-      twistcliCmd = twistcliCmd.concat(['--containerized']);
-    }
-    if (customLabels) {
-      twistcliCmd = twistcliCmd.concat([`--custom-labels ${customLabels}`]);
-    }
-    twistcliCmd = twistcliCmd.concat([imageName]);
 
     const exitCode = await exec(twistcliCmd.join(' '), undefined, {
       ignoreReturnCode: true,
     });
+
     if (exitCode > 0) {
       core.setFailed('Image scan failed');
     }
@@ -323,9 +279,7 @@ async function scan() {
 }
 
 if (require.main === module) {
-  try {
-    scan();
-  } catch (err) {
+  scan().catch(err => {
     core.setFailed(err.message);
-  }
+  });
 }
