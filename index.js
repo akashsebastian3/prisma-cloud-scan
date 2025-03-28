@@ -281,6 +281,7 @@ async function scan() {
       `--output-file ${resultsFile}`,
       '--details',' --custom-labels traceable',
     ]);
+    console.log('twistcli command:', twistcliCmd.join(' '));
     if (dockerAddress) {
       twistcliCmd = twistcliCmd.concat([`--docker-address ${dockerAddress}`]);
     }
