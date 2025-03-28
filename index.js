@@ -279,7 +279,7 @@ async function scan() {
       `--address ${consoleUrl}`,
       `--user ${username}`, `--password ${password}`,
       `--output-file ${resultsFile}`,
-      '--details',' --custom-labels traceable'
+      '--details',' --custom-labels traceable',
     ]);
     if (dockerAddress) {
       twistcliCmd = twistcliCmd.concat([`--docker-address ${dockerAddress}`]);
