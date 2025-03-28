@@ -297,7 +297,7 @@ async function scan() {
       twistcliCmd = twistcliCmd.concat(['--containerized']);
     }
     if (customLabels) {
-      twistcliCmd = twistcliCmd.concat([`--custom-labels "${customLabels}"`]);
+      twistcliCmd = twistcliCmd.concat([`--custom-labels ${customLabels}`]);
     }
     twistcliCmd = twistcliCmd.concat([imageName]);
 
